@@ -1,0 +1,213 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DAXX BANNA 11</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101827;color:white;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button{cursor:pointer;border:0;border-radius:12px;padding:12px 15px;font-weight:600}
+.login{min-height:100vh;display:grid;place-items:center;padding:20px}
+.loginbox{background:#202d40;padding:28px;border-radius:22px;width:100%;max-width:380px;text-align:center}
+input{padding:13px;border:1px solid #526176;border-radius:10px;background:#101827;color:white;width:100%;margin:8px 0}
+.primary{background:#4285f4;color:white}
+.secondary{background:#344258;color:white}
+.danger{background:#a93243;color:white}
+header{padding:22px 18px;display:flex;justify-content:space-between;align-items:center}
+h1{font-size:23px;margin:0}
+.muted{color:#9caabd;font-size:13px}
+main{max-width:850px;margin:auto;padding:12px}
+.storage,.folder,.file{background:#202d40;border-radius:17px;padding:16px;margin-bottom:13px}
+.bar{height:6px;background:#45546a;border-radius:8px;margin-top:12px}
+.bar span{display:block;width:25%;height:6px;background:#60a5fa;border-radius:8px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.folder{min-height:125px;cursor:pointer}
+.folder .ico{font-size:34px;margin-bottom:10px}
+.toolbar{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:16px 0}
+.toolbar button{width:100%}
+.gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.photo{aspect-ratio:1;background:#263a52;position:relative;overflow:hidden;cursor:pointer}
+.photo img,.photo video{width:100%;height:100%;object-fit:cover}
+.photo input{position:absolute;top:5px;left:5px;width:20px;margin:0}
+.file{display:flex;align-items:center;gap:13px;cursor:pointer}
+.fileicon{font-size:30px}
+.fileinfo{flex:1;min-width:0}
+.fileinfo strong{display:block;overflow-wrap:anywhere}
+.cover{height:150px;width:150px;border-radius:20px;background:linear-gradient(135deg,#74538d,#d77b9b);display:grid;place-items:center;font-size:60px;margin:20px auto}
+.modal{position:fixed;inset:0;background:#000e;display:none;place-items:center;padding:20px;z-index:5}
+.modalbox{background:#202d40;padding:15px;border-radius:18px;max-width:600px;width:100%;text-align:center}
+.modalbox img,.modalbox video{max-width:100%;max-height:65vh}
+#app{display:none}
+</style>
+</head>
+<body>
+
+<section id="login" class="login">
+ <div class="loginbox">
+  <div style="font-size:45px">☁️</div>
+  <h1>DAXX BANNA 11</h1>
+  <p class="muted">Your Personal Cloud Storage</p>
+  <input id="username" placeholder="User ID">
+  <input id="password" type="password" placeholder="Password">
+  <button class="primary" style="width:100%" onclick="login()">LOGIN</button>
+  <p id="error" class="muted"></p>
+ </div>
+</section>
+
+<section id="app">
+<header>
+ <div><h1>DAXX BANNA 11</h1><div class="muted">Personal File Manager</div></div>
+ <button class="secondary" onclick="logout()">Logout</button>
+</header>
+<main>
+ <div class="storage">
+  <div class="muted">MY STORAGE</div>
+  <h1>My Cloud ☁️</h1>
+  <div class="bar"><span></span></div>
+  <p class="muted">Google Drive connection will be added next</p>
+ </div>
+ <section id="home">
+  <h3>My Folders</h3>
+  <div class="grid">
+   <div class="folder" onclick="openFolder('Photos')"><div class="ico">🌸</div><b>Photos</b><div class="muted">My Gallery</div></div>
+   <div class="folder" onclick="openFolder('Videos')"><div class="ico">🎬</div><b>Videos</b><div class="muted">My Videos</div></div>
+   <div class="folder" onclick="openFolder('Music')"><div class="ico">🎵</div><b>Music</b><div class="muted">My Songs</div></div>
+   <div class="folder" onclick="openFolder('Documents')"><div class="ico">📁</div><b>Documents</b><div class="muted">My Files</div></div>
+  </div>
+ </section>
+ <section id="inside" style="display:none">
+  <button class="secondary" onclick="goHome()">← Back</button>
+  <h2 id="folderTitle"></h2>
+  <div class="toolbar">
+   <button class="primary" onclick="document.getElementById('picker').click()">＋ Import</button>
+   <button class="secondary" onclick="toggleSelect()">☑ Select</button>
+   <button class="secondary" onclick="downloadSelected()">↓ Download</button>
+   <button class="danger" onclick="deleteSelected()">Delete</button>
+  </div>
+  <input id="picker" type="file" multiple hidden onchange="importFiles(event)">
+  <div id="files"></div>
+ </section>
+</main>
+</section>
+
+<div class="modal" id="modal" onclick="closePreview()">
+ <div class="modalbox" id="preview" onclick="event.stopPropagation()"></div>
+</div>
+
+<script>
+let current="Photos",selected=new Set(),selectMode=false;
+let library={Photos:[],Videos:[],Music:[],Documents:[]};
+
+function login(){
+ if(!username.value.trim()||!password.value.trim()){
+  error.textContent="Enter your User ID and Password";
+  return;
+ }
+ loginScreen();
+}
+function loginScreen(){
+ document.getElementById("login").style.display="none";
+ document.getElementById("app").style.display="block";
+}
+function logout(){
+ document.getElementById("app").style.display="none";
+ document.getElementById("login").style.display="grid";
+ password.value="";
+}
+function openFolder(name){
+ current=name;selected.clear();selectMode=false;
+ home.style.display="none";inside.style.display="block";
+ folderTitle.textContent=name;
+ picker.accept={Photos:"image/*",Videos:"video/*",Music:"audio/*",Documents:".pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx"}[name];
+ render();
+}
+function goHome(){
+ inside.style.display="none";home.style.display="block";
+}
+function importFiles(e){
+ [...e.target.files].forEach(file=>{
+  library[current].push({file,url:URL.createObjectURL(file),id:Math.random()});
+ });
+ e.target.value="";
+ render();
+}
+function toggleSelect(){selectMode=!selectMode;selected.clear();render()}
+function render(){
+ files.innerHTML="";
+ let list=library[current];
+ if(!list.length){
+  files.innerHTML='<p class="muted" style="text-align:center;padding:35px">No files yet. Tap Import to add files.</p>';
+  return;
+ }
+ if(current==="Photos"||current==="Videos"){
+  let grid=document.createElement("div");grid.className="gallery";
+  list.forEach(item=>{
+   let cell=document.createElement("div");cell.className="photo";
+   let media=document.createElement(current==="Photos"?"img":"video");
+   media.src=item.url;
+   if(current==="Videos")media.controls=false;
+   cell.appendChild(media);
+   if(selectMode){
+    let cb=document.createElement("input");cb.type="checkbox";
+    cb.checked=selected.has(item.id);
+    cb.onclick=e=>{e.stopPropagation();cb.checked?selected.add(item.id):selected.delete(item.id)};
+    cell.appendChild(cb);
+   }
+   cell.onclick=()=>selectMode?toggleItem(item.id):showPreview(item);
+   grid.appendChild(cell);
+  });
+  files.appendChild(grid);
+ }else{
+  list.forEach(item=>{
+   let row=document.createElement("div");row.className="file";
+   let ico=document.createElement("div");ico.className="fileicon";
+   ico.textContent=current==="Music"?"🎵":"📄";
+   let info=document.createElement("div");info.className="fileinfo";
+   let name=document.createElement("strong");name.textContent=item.file.name;
+   let size=document.createElement("span");size.className="muted";size.textContent=(item.file.size/1024).toFixed(1)+" KB";
+   info.append(name,size);row.append(ico,info);
+   if(selectMode){
+    let cb=document.createElement("input");cb.type="checkbox";
+    cb.checked=selected.has(item.id);
+    cb.onchange=()=>toggleItem(item.id);row.append(cb);
+   }
+   row.onclick=()=>selectMode?toggleItem(item.id):showPreview(item);
+   files.appendChild(row);
+  });
+ }
+}
+function toggleItem(id){
+ selected.has(id)?selected.delete(id):selected.add(id);render();
+}
+function downloadSelected(){
+ library[current].filter(x=>selected.has(x.id)).forEach(x=>{
+  let a=document.createElement("a");a.href=x.url;a.download=x.file.name;a.click();
+ });
+}
+function deleteSelected(){
+ if(!selected.size)return;
+ if(!confirm("Delete selected files?"))return;
+ library[current]=library[current].filter(x=>{
+  if(selected.has(x.id)){URL.revokeObjectURL(x.url);return false}
+  return true;
+ });
+ selected.clear();render();
+}
+function showPreview(item){
+ let box=document.getElementById("preview");box.innerHTML="";
+ let title=document.createElement("h3");title.textContent=item.file.name;box.appendChild(title);
+ let el;
+ if(item.file.type.startsWith("image/")){el=document.createElement("img")}
+ else if(item.file.type.startsWith("video/")){el=document.createElement("video");el.controls=true}
+ else if(item.file.type.startsWith("audio/")){el=document.createElement("audio");el.controls=true}
+ else{el=document.createElement("p");el.textContent="Document selected. Download to open it."}
+ if(el.tagName!=="P"){el.src=item.url;el.style.maxWidth="100%";box.appendChild(el)}
+ else box.appendChild(el);
+ document.getElementById("modal").style.display="grid";
+}
+function closePreview(){document.getElementById("modal").style.display="none"}
+</script>
+</body>
+</html>
