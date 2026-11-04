@@ -79,6 +79,17 @@ async function signInWithGoogle() {
 
   if (error) alert(error.message);
 }
+
+async function checkLogin() {
+  const { data } = await supabaseClient.auth.getSession();
+
+  if (data.session) {
+    document.getElementById("login").style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
+  }
+}
+
+checkLogin();
 </script>
 </body>
 </html>
